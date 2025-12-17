@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider = "sqlite"
+  url      = "file:dev.sqlite"
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Submission {
+  id          String    @id @default(cuid())
+  shop        String    // Shopify shop domain
+  customerId  String
+  customerName String
+  customerEmail String
+  orderNumber String?   // Kundens ordrenummer
+  orderAmount Float?    // Ordrens værdi i DKK
+  productId   String
+  productTitle String
+  imageUrl    String
+  imageData   String?   // Base64 for local preview
+  status      String    @default("pending") // pending, approved, rejected
+  reward      Reward?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  voucherCode String?   // Unik voucher code
+  emailSent    Boolean   @default(false)
+  sentAt       DateTime?
+}
+model Reward {
+  id          String    @id @default(cuid())
+  submissionId String   @unique
+  submission  Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  type        String    @default("cashback") // cashback, voucher, credit
+  amount      Int       // beløb i øre (5000 = 50 DKK)
+  voucherCode String?
+  redeemed    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model RewardSettings {
+  id                 String    @id @default(cuid())
+  defaultAmount      Int       @default(5000) // 50 DKK i øre
+  defaultPercentage  Float     @default(0) // Procent af ordre (10.0 = 10%)
+  valueType          String    @default("fixed") // fixed, percentage
+  rewardType         String    @default("cashback") // cashback, voucher, credit
+  voucherType        String    @default("percentage_first_order") // percentage_first_order, percentage_next_order
+  discountPercentage Float     @default(30.0) // Procent rabat på næste ordre (kun for percentage_next_order)
+  currency           String    @default("DKK")
+  widgetTitle        String    @default("🎁 Del & Få Rabat")
+  widgetSubtitle     String    @default("Del din ordre på sociale medier og få din reward")
+  widgetButtonLabel  String    @default("Læs mere")
+  widgetModalTitle   String    @default("🎁 Del & Få Rabat")
+  widgetModalBody    String    @default("Upload et screenshot af din story, så sender vi din reward")
+  backgroundColor    String    @default("#a855f7")
+  accentColor        String    @default("#ec4899")
+  textColor          String    @default("#ffffff")
+  buttonColor        String    @default("#a855f7")
+  buttonTextColor    String    @default("#ffffff")
+  borderRadius       Int       @default(8)
+  designStyle        String    @default("gradient")
+  // Email customization fields - Voucher/Discount
+  emailSubject       String    @default("🎁 Din rabat er klar!")
+  emailFromName      String    @default("ShareJoy")
+  emailBodyHTML      String    @default("<p>Tak for dit bidrag! Din rabat er klar.</p>")
+  emailButtonText    String    @default("Shop nu")
+  emailBrandColor    String    @default("#a855f7")
+  // Email customization fields - Cashback
+  cashbackEmailSubject    String    @default("💰 Din cashback er på vej!")
+  cashbackEmailFromName   String    @default("ShareJoy")
+  cashbackEmailBodyHTML   String    @default("<p>Tak for at dele! Vi behandler din cashback.</p>")
+  cashbackEmailBrandColor String    @default("#10b981")
+  cashbackProcessingTime  String    @default("3-5 hverdage")
+  // Email customization fields - Reminder
+  reminderEmailSubject    String    @default("⏰ Din reminder fra ShareJoy")
+  reminderEmailFromName   String    @default("ShareJoy")
+  reminderEmailBodyHTML   String    @default("<p>Hej! Dette er din reminder fra ShareJoy.<br>Du ønskede at blive mindet om at lægge en ordre. God fornøjelse!</p>")
+  reminderEmailBrandColor String    @default("#6366f1")
+  // Widget pop-up step texts
+  widgetStep1Text    String    @default("1. Del din ordre på sociale medier")
+  widgetStep2Text    String    @default("2. Upload et screenshot af din story")
+  widgetStep3Text    String    @default("3. Modtag din reward!")
+  updatedAt          DateTime  @updatedAt
+}
+
+model ReminderEmail {
+  id        String   @id @default(cuid())
+  email     String
+  sendAt    DateTime
+  sent      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

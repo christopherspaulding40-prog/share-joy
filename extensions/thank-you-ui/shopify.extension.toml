@@ -1,0 +1,10 @@
+api_version = "2025-01"
+
+[[extensions]]
+uid = "f448e2f6-5580-91ea-8a35-00c878d6e1f8930e3e24"
+type = "post_purchase_ui"
+name = "ShareJoy Post Purchase"
+handle = "sharejoy-post-purchase"
+
+[[extensions.targeting]]
+target = "purchase.post.render"

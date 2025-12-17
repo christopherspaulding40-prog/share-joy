@@ -1,0 +1,3 @@
+[commands]
+predev = "npx prisma generate"
+dev = "react-router dev"

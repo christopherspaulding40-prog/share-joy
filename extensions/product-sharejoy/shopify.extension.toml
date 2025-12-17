@@ -1,0 +1,5 @@
+name = "ShareJoy Product Widget"
+handle = "sharejoy-product-widget"
+uid = "36c5615e-6c78-db2e-ee75-a6a72f744975c556267d"
+type = "theme"
+development_port = 9494

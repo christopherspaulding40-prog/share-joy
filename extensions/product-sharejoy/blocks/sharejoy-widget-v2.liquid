@@ -1,0 +1,408 @@
+<div id="sharejoy-widget-v2" 
+     style="padding: 1.5rem; margin: 2rem 0; border-radius: 0.5rem; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); text-align: center; cursor: pointer; position: relative; transition: transform 0.2s;" 
+     data-theme-editor-target="sharejoy-widget-v2" 
+     onmouseover="this.style.transform='scale(1.02)'" 
+     onmouseout="this.style.transform='scale(1)'" 
+     title="Klik for at åbne indstillinger">
+  <h3 id="sharejoy-title" style="color: white; margin: 0 0 0.5rem 0; font-size: 1.25rem; font-weight: 600;">🎁 Del & Få <span id="sharejoy-reward-text"></span></h3>
+  <p id="sharejoy-subtitle" style="color: rgba(255, 255, 255, 0.95); margin: 0 0 1rem 0; font-size: 0.95rem;">Del din ordre på sociale medier og få din reward.</p>
+  <button id="sharejoy-open-modal-v2" onclick="document.getElementById('sharejoy-modal-v2').style.display='flex';" style="background: white; color: #a855f7; border: none; padding: 0.75rem 1.5rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; font-size: 0.95rem; transition: transform 0.2s; position: relative; z-index: 1;">
+    <span id="sharejoy-button-text">Læs mere</span>
+  </button>
+</div>
+
+<!-- Modal -->
+<div id="sharejoy-modal-v2" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;" onclick="if(event.target.id === 'sharejoy-modal-v2') this.style.display='none';">
+  <div style="background: white; border-radius: 0.75rem; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; padding: 2rem;">
+    <button id="sharejoy-close-modal-v2" onclick="document.getElementById('sharejoy-modal-v2').style.display='none';" style="position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+    
+    <h2 id="sharejoy-modal-title" style="margin: 0 0 0.75rem 0; color: #a855f7; font-size: 1.5rem;">🎁 Del & Få Rabat</h2>
+    <p id="sharejoy-modal-body" style="margin: 0 0 1rem 0; color: #4b5563; line-height: 1.5;">Upload et screenshot af din story, så sender vi din reward.</p>
+    
+    <div style="margin-bottom: 1.5rem; color: #333; line-height: 1.6;">
+      <p><strong>Sådan virker det:</strong></p>
+      <ol style="text-align: left; padding-left: 1.25rem;">
+        <li id="sharejoy-step-1"></li>
+        <li id="sharejoy-step-2"></li>
+        <li id="sharejoy-step-3"></li>
+      </ol>
+      <div id="sharejoy-reminder-box" style="margin-top: 1.5rem; padding: 1.1rem 1rem; background: #f9fafb; border-radius: 0.5rem; border: 1px solid #e5e7eb;">
+        <div style="margin-bottom: 0.5rem; font-size: 1rem; color: #333;">Skal du til at ligge en ordre? Skriv din mail her og få en reminder når du modtager pakken.</div>
+        <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.97rem; cursor: pointer;">
+          <input type="checkbox" id="sharejoy-reminder-check" style="accent-color: #a855f7; width: 18px; height: 18px;" />
+          Ja, jeg vil gerne have en reminder
+        </label>
+        <div id="sharejoy-reminder-form" style="display: none; margin-top: 0.7rem;">
+          <input type="email" id="sharejoy-reminder-email" placeholder="Din email" style="width: 100%; padding: 0.6rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.97rem; margin-bottom: 0.6rem;" />
+          <button id="sharejoy-reminder-btn" style="width: 100%; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); color: white; border: none; padding: 0.7rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; font-size: 1rem;">Få en reminder</button>
+          <div id="sharejoy-reminder-success" style="display:none; color: #10b981; margin-top: 0.5rem; font-size: 0.97rem; text-align: center;">Tak! Du får en reminder om 3 dage.</div>
+          <div id="sharejoy-reminder-error" style="display:none; color: #ef4444; margin-top: 0.5rem; font-size: 0.97rem; text-align: center;">Ugyldig email eller fejl. Prøv igen.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #f3f4f6; padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+      <h3 style="margin: 0 0 1rem 0; color: #1f2937; font-size: 1.1rem;">Allerede lavet din story?</h3>
+      
+      <form id="sharejoy-form-v2" style="text-align: left;">
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">Ordrenummer:</label>
+          <input type="text" id="sharejoy-order-number-v2" required placeholder="#1234" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.95rem;">
+        </div>
+        
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">Upload screenshot:</label>
+          <input type="file" id="sharejoy-screenshot-v2" accept="image/*" required style="width: 100%; padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.95rem;">
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="display: block; margin-bottom: 0.5rem; color: #374151; font-weight: 500;">Din email:</label>
+          <input type="email" id="sharejoy-email-v2" required placeholder="din@email.dk" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 0.95rem;">
+        </div>
+        
+        <button type="submit" style="width: 100%; background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%); color: white; border: none; padding: 0.875rem; border-radius: 0.375rem; font-weight: 600; cursor: pointer; font-size: 1rem;">
+          Send & Få Rabat
+        </button>
+      </form>
+      
+      <div id="sharejoy-success-v2" style="display: none; margin-top: 1rem; padding: 1rem; background: #d1fae5; color: #065f46; border-radius: 0.375rem; text-align: center;">
+        ✅ Tak! Vi verificerer din submission og sender din rabat snarest.
+      </div>
+      
+      <div id="sharejoy-error-v2" style="display: none; margin-top: 1rem; padding: 1rem; background: #fee2e2; color: #991b1b; border-radius: 0.375rem; text-align: center;">
+        ❌ Noget gik galt. Prøv igen.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  // Reminder logic
+  var reminderCheck = document.getElementById('sharejoy-reminder-check');
+  var reminderForm = document.getElementById('sharejoy-reminder-form');
+  var reminderBtn = document.getElementById('sharejoy-reminder-btn');
+  var reminderEmail = document.getElementById('sharejoy-reminder-email');
+  var reminderSuccess = document.getElementById('sharejoy-reminder-success');
+  var reminderError = document.getElementById('sharejoy-reminder-error');
+  if(reminderCheck && reminderForm) {
+    reminderCheck.addEventListener('change', function() {
+      reminderForm.style.display = this.checked ? 'block' : 'none';
+      reminderSuccess.style.display = 'none';
+      reminderError.style.display = 'none';
+    });
+  }
+  if(reminderBtn && reminderEmail) {
+    reminderBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      reminderSuccess.style.display = 'none';
+      reminderError.style.display = 'none';
+      var email = reminderEmail.value.trim();
+      if(!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        reminderError.style.display = 'block';
+        reminderError.textContent = 'Ugyldig email.';
+        return;
+      }
+      reminderBtn.disabled = true;
+      fetch('/apps/sharejoy/api/reminder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if(data.success) {
+          reminderSuccess.style.display = 'block';
+          reminderError.style.display = 'none';
+          reminderEmail.value = '';
+        } else {
+          reminderError.style.display = 'block';
+          reminderError.textContent = data.error || 'Fejl. Prøv igen.';
+        }
+      })
+      .catch(function() {
+        reminderError.style.display = 'block';
+        reminderError.textContent = 'Fejl. Prøv igen.';
+      })
+      .finally(function() {
+        reminderBtn.disabled = false;
+      });
+    });
+  }
+})();
+(function initShareJoyWidget() {
+  // Hent reward settings og opdater tekst
+  async function loadRewardSettings() {
+    try {
+      const response = await fetch('/apps/sharejoy/api/settings');
+      const data = await response.json();
+      
+      if (data.success && data.settings) {
+        const {
+          valueType,
+          amount,
+          percentage,
+          rewardType,
+          widgetTitle,
+          widgetSubtitle,
+          widgetButtonLabel,
+          widgetModalTitle,
+          widgetModalBody,
+          backgroundColor,
+          accentColor,
+          textColor,
+          buttonColor,
+          buttonTextColor,
+          borderRadius,
+          designStyle,
+        } = data.settings;
+
+        const rewardText = document.getElementById('sharejoy-reward-text');
+        const titleEl = document.getElementById('sharejoy-title');
+        const subtitleEl = document.getElementById('sharejoy-subtitle');
+        const buttonTextEl = document.getElementById('sharejoy-button-text');
+        const modalTitleEl = document.getElementById('sharejoy-modal-title');
+        const modalBodyEl = document.getElementById('sharejoy-modal-body');
+        const widgetEl = document.getElementById('sharejoy-widget-v2');
+        const openBtn = document.getElementById('sharejoy-open-modal-v2');
+        const step1El = document.getElementById('sharejoy-step-1');
+        const step2El = document.getElementById('sharejoy-step-2');
+        const step3El = document.getElementById('sharejoy-step-3');
+  if (step1El && data.settings.widgetStep1Text) step1El.textContent = data.settings.widgetStep1Text;
+  if (step2El && data.settings.widgetStep2Text) step2El.textContent = data.settings.widgetStep2Text;
+  if (step3El && data.settings.widgetStep3Text) step3El.textContent = data.settings.widgetStep3Text;
+
+        // Apply design styles
+        if (widgetEl) {
+          const br = borderRadius ? `${borderRadius}px` : '8px';
+          let bgStyle = '';
+          if (designStyle === 'gradient') {
+            bgStyle = `linear-gradient(135deg, ${backgroundColor} 0%, ${accentColor} 100%)`;
+          } else if (designStyle === 'solid') {
+            bgStyle = backgroundColor;
+          } else if (designStyle === 'outline') {
+            bgStyle = 'transparent';
+            widgetEl.style.border = `2px solid ${backgroundColor}`;
+          }
+          widgetEl.style.background = bgStyle;
+          widgetEl.style.borderRadius = br;
+          widgetEl.style.color = textColor;
+        }
+
+        if (openBtn) {
+          openBtn.style.background = buttonColor || '#a855f7';
+          openBtn.style.color = buttonTextColor || '#ffffff';
+        }
+
+        if (titleEl && widgetTitle) titleEl.firstChild.nodeValue = widgetTitle + ' ';
+        if (subtitleEl && widgetSubtitle) subtitleEl.textContent = widgetSubtitle;
+        if (buttonTextEl && widgetButtonLabel) buttonTextEl.textContent = widgetButtonLabel;
+        if (modalTitleEl && widgetModalTitle) modalTitleEl.textContent = widgetModalTitle;
+        if (modalBodyEl && widgetModalBody) modalBodyEl.textContent = widgetModalBody;
+
+        if (rewardText) {
+          // Only show what the business has set (if anything)
+          rewardText.textContent = '';
+        }
+      }
+    } catch (error) {
+      console.error('[ShareJoy] Error loading reward settings:', error);
+    }
+  }
+
+  function setupWidget() {
+    const modal = document.getElementById('sharejoy-modal-v2');
+    const openBtn = document.getElementById('sharejoy-open-modal-v2');
+    const closeBtn = document.getElementById('sharejoy-close-modal-v2');
+    const form = document.getElementById('sharejoy-form-v2');
+    const successMsg = document.getElementById('sharejoy-success-v2');
+    const errorMsg = document.getElementById('sharejoy-error-v2');
+
+    if (!openBtn || !modal || !closeBtn || !form) {
+      console.error('[ShareJoy] Widget elements not found');
+      return;
+    }
+
+    // Hent reward settings
+    loadRewardSettings();
+
+    // Fjern gamle listeners hvis de findes
+    const newOpenBtn = openBtn.cloneNode(true);
+    openBtn.parentNode.replaceChild(newOpenBtn, openBtn);
+    
+    console.log('[ShareJoy] Widget initialized');
+
+    newOpenBtn.onclick = function(e) {
+      e.preventDefault();
+      console.log('[ShareJoy] Opening modal');
+      modal.style.display = 'flex';
+    };
+
+  closeBtn.addEventListener('click', function() {
+    console.log('[ShareJoy] Closing modal');
+    modal.style.display = 'none';
+  });
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    console.log('[ShareJoy] Form submitted');
+    
+    const orderNumber = document.getElementById('sharejoy-order-number-v2').value;
+    const email = document.getElementById('sharejoy-email-v2').value;
+    const screenshot = document.getElementById('sharejoy-screenshot-v2').files[0];
+
+    if (!screenshot) {
+      errorMsg.style.display = 'block';
+      errorMsg.textContent = '❌ Upload venligst et screenshot';
+      return;
+    }
+
+    try {
+      errorMsg.style.display = 'none';
+      console.log('[ShareJoy] Compressing image from', Math.round(screenshot.size / 1024), 'KB');
+      
+      // Komprimer billedet først
+      const compressedBlob = await new Promise((resolve, reject) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = function() {
+          try {
+            // Skaler billedet ned til max 1200px width
+            let width = img.width;
+            let height = img.height;
+            const maxWidth = 1200;
+            
+            if (width > maxWidth) {
+              const ratio = maxWidth / width;
+              width = maxWidth;
+              height = Math.round(height * ratio);
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, width, height);
+            
+            // Konverter til blob med komprimering
+            canvas.toBlob(function(blob) {
+              if (blob) {
+                console.log('[ShareJoy] Compressed to', Math.round(blob.size / 1024), 'KB');
+                resolve(blob);
+              } else {
+                reject(new Error('Failed to compress image'));
+              }
+            }, 'image/jpeg', 0.8);
+          } catch (err) {
+            reject(err);
+          }
+        };
+        
+        img.onerror = function() {
+          reject(new Error('Failed to load image'));
+        };
+        
+        // Load image from file
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          img.src = e.target.result;
+        };
+        reader.onerror = function() {
+          reject(new Error('Failed to read file'));
+        };
+        reader.readAsDataURL(screenshot);
+      });
+
+      // Send den komprimerede fil
+      const formData = new FormData();
+      formData.append('file', compressedBlob, 'screenshot.jpg');
+      formData.append('productId', orderNumber);
+      formData.append('customerEmail', email);
+      formData.append('customerName', email.split('@')[0]);
+      formData.append('productTitle', window.ShopifyAnalytics?.meta?.product?.name || 'Product');
+
+      console.log('[ShareJoy] Sending submission to API via App Proxy...');
+
+          const response = await fetch('http://127.0.0.1:3001/api/rewards/upload', {
+      });
+
+      console.log('[ShareJoy] Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[ShareJoy] API error:', errorText);
+        throw new Error('API request failed: ' + errorText);
+      }
+
+      const result = await response.json();
+      console.log('[ShareJoy] API response:', result);
+
+      if (result.success) {
+        console.log('[ShareJoy] Submission sent! ID:', result.submission?.id);
+        successMsg.style.display = 'block';
+        successMsg.innerHTML = '✅ Tak! Din submission er modtaget.';
+        errorMsg.style.display = 'none';
+        form.reset();
+        
+        setTimeout(function() {
+          modal.style.display = 'none';
+          successMsg.style.display = 'none';
+        }, 3000);
+      } else {
+        throw new Error(result.error || 'Upload fejlede');
+      }
+
+    } catch (error) {
+      console.error('[ShareJoy] Error:', error);
+      errorMsg.style.display = 'block';
+      errorMsg.textContent = '❌ Noget gik galt. Prøv igen. ' + (error.message || String(error));
+      successMsg.style.display = 'none';
+    }
+  });
+
+    console.log('[ShareJoy] Widget v2 initialized');
+  }
+
+  // Kør med det samme
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupWidget);
+  } else {
+    setupWidget();
+  }
+
+  // Også efter Shopify AJAX navigation
+  if (typeof Shopify !== 'undefined' && Shopify.designMode) {
+    document.addEventListener('shopify:section:load', setupWidget);
+  }
+
+  // Tilføj theme editor support
+  if (typeof Shopify !== 'undefined' && Shopify.designMode) {
+    const widgetEl = document.getElementById('sharejoy-widget-v2');
+    if (widgetEl) {
+      widgetEl.addEventListener('click', function(e) {
+        if (e.shiftKey) {
+          // Åbn indstillinger ved Shift+Click
+          const settingsUrl = '/admin/custom_fields';
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ action: 'openSettings' }, '*');
+          }
+        }
+      });
+    }
+  }
+})();
+</script>
+
+{% schema %}
+{
+  "name": "ShareJoy Widget V2",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

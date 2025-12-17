@@ -1,0 +1,5 @@
+{
+  "scripts": {
+    "send-reminders": "ts-node scripts/send-reminders.ts"
+  }
+}
