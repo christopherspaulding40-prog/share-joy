@@ -1,6 +1,7 @@
 import { data } from 'react-router';
 import type { Route } from './+types/api.rewards.upload';
 import prisma from '../db.server';
+import { generateVoucherCode } from '../voucher.server';
 
 export const action = async ({ request }: Route.ActionArgs) => {
   // Handle CORS preflight
@@ -69,14 +70,17 @@ export const action = async ({ request }: Route.ActionArgs) => {
 
     const submission = await (prisma as any).submission.create({
       data: {
+        shop: 'myshopify.com', // Default shop, will be used for all widget submissions
         customerId: customerEmail || 'anonymous',
         customerName: customerName || 'Anonymous',
         customerEmail: customerEmail || 'noemail@example.com',
+        orderNumber: productId, // This is the order number from the widget
         productId: productId,
         productTitle: productTitle || 'Unknown Product',
         imageUrl: imageData,
         imageData: imageData,
         status: 'pending',
+        voucherCode: generateVoucherCode(),
       },
     });
 

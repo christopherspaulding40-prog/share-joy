@@ -23,6 +23,14 @@ export async function sendVoucherEmail(
   discountAmount?: number
 ) {
   try {
+    console.log('[Email] Attempting to send voucher email to:', customerEmail);
+    console.log('[Email] RESEND_API_KEY exists:', !!process.env.RESEND_API_KEY);
+
+    if (!process.env.RESEND_API_KEY) {
+      console.error('[Email] ERROR: RESEND_API_KEY not set in environment');
+      return { success: false, error: 'RESEND_API_KEY not configured' };
+    }
+
     const prisma = db as any;
     const settings = await prisma.rewardSettings.findFirst();
     const subject = settings?.emailSubject || '🎁 Din rabat er klar!';
@@ -31,9 +39,24 @@ export async function sendVoucherEmail(
     const buttonText = settings?.emailButtonText || 'Shop nu';
     const customBody = settings?.emailBodyHTML || '<p>Tak for dit bidrag! Din rabat er klar.</p>';
 
-    const result = await resend.emails.send({
+    console.log('[Email] Sending from:', `${fromName} <onboarding@resend.dev>`);
+
+    console.log('[Email] About to send email with:', {
       from: `${fromName} <onboarding@resend.dev>`,
       to: customerEmail,
+      subject: subject,
+      hasHtml: true,
+    });
+
+    // For testing: send all emails to Resend's test recipient
+    const testMode = true;
+    const recipientEmail = testMode ? 'delivered@resend.dev' : customerEmail;
+    
+    console.log('[Email] Sending to:', recipientEmail, testMode ? '(TEST MODE)' : '');
+
+    const result = await resend.emails.send({
+      from: `${fromName} <onboarding@resend.dev>`,
+      to: recipientEmail,
       subject: subject,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -85,9 +108,18 @@ export async function sendVoucherEmail(
       `,
     });
 
+    console.log('[Email] Full response from Resend:', JSON.stringify(result, null, 2));
+    console.log('[Email] Has error?', result.error);
+    console.log('[Email] Has data?', result.data);
+    if (result.error) {
+      console.log('[Email] ERROR from Resend API:', result.error);
+      return { success: false, error: result.error };
+    }
+    console.log('[Email] ✓ Email sent successfully:', result.data?.id);
     return { success: true, messageId: result.data?.id };
-  } catch (error) {
-    console.error('Failed to send voucher email:', error);
-    return { success: false, error };
+  } catch (error: any) {
+    console.error('[Email] ERROR sending voucher email:', error.message);
+    console.error('[Email] Full error:', error);
+    return { success: false, error: error.message || String(error) };
   }
 }

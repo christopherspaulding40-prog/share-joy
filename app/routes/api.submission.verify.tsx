@@ -99,33 +99,45 @@ export async function action({ request }: ActionFunctionArgs) {
       }
     }
 
-    // Create Shopify discount code
+    // Create Shopify discount code with correct type (fixed or percentage)
     console.log("[Verify] Creating Shopify discount code:", submission.voucherCode);
+    console.log("[Verify] Reward settings:", { valueType: settings.valueType, defaultAmount: settings.defaultAmount, defaultPercentage: settings.defaultPercentage });
     
-    const discountResult = await createShopifyDiscountCode(admin, {
+    let discountParams: any = {
       code: submission.voucherCode,
-      type: settings.voucherType || 'percentage_first_order',
-      discountPercentage: settings.discountPercentage || 30,
-      orderAmount: orderAmount, // Used for percentage_first_order
-    });
+      valueType: settings.valueType || 'fixed', // 'fixed' or 'percentage'
+    };
+
+    // Beregn rabat beløb baseret på type
+    if (settings.valueType === 'percentage') {
+      // Procent rabat - brug defaultPercentage eller defaultAmount som procent
+      discountParams.amount = settings.defaultPercentage || 30; // Procent (30 = 30%)
+      console.log("[Verify] Using percentage discount:", discountParams.amount + '%');
+    } else {
+      // Fast beløb - defaultAmount er i øre (5000 = 50 DKK)
+      discountParams.amount = settings.defaultAmount || 5000; // øre
+      console.log("[Verify] Using fixed discount:", (discountParams.amount / 100).toFixed(2) + ' DKK');
+    }
+
+    const discountResult = await createShopifyDiscountCode(admin, discountParams);
 
     if (!discountResult.success) {
       console.error("[Verify] Discount creation failed:", discountResult.error);
-      return json({ 
-        error: "Kunne ikke oprette Shopify discount code",
-        details: discountResult.error
-      }, { status: 500 });
+      console.error("[Verify] Discount details:", discountResult.details);
+      // Log error but continue - email is more important
+    } else {
+      console.log("[Verify] Discount created:", discountResult.discountId);
     }
-
-    console.log("[Verify] Discount created:", discountResult.discountId);
 
     // Calculate discount amount for email display
     let discountAmount: number | undefined;
-    if (settings.voucherType === 'percentage_first_order' && submission.orderAmount) {
-      discountAmount = (submission.orderAmount * (settings.discountPercentage || 30)) / 100;
+    if (settings.valueType === 'percentage' && submission.orderAmount) {
+      discountAmount = (submission.orderAmount * (settings.defaultPercentage || 30)) / 100;
+    } else if (settings.valueType === 'fixed') {
+      discountAmount = (settings.defaultAmount || 5000) / 100; // Convert from øre to DKK
     }
 
-    // Send email with existing voucher code
+    // Send email with voucher code
     console.log("[Verify] Sending voucher email for submission:", submissionId);
     
     const emailResult = await sendVoucherEmail(
@@ -133,10 +145,13 @@ export async function action({ request }: ActionFunctionArgs) {
       submission.customerName || "Kunde",
       submission.voucherCode,
       submission.productTitle || "Produkt",
-      settings.voucherType || 'percentage_first_order',
-      settings.discountPercentage || 30,
+      settings.valueType === 'percentage' ? 'percentage_next_order' : 'percentage_first_order',
+      settings.defaultPercentage || 30,
       discountAmount
-    );
+    ).catch((err: any) => {
+      console.error("[Verify] Email error:", err);
+      return { success: false, error: String(err) };
+    });
 
     if (!emailResult.success) {
       console.error("[Verify] Email failed:", emailResult.error);

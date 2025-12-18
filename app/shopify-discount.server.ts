@@ -5,9 +5,8 @@
 
 interface CreateDiscountCodeParams {
   code: string;
-  type: 'percentage_first_order' | 'percentage_next_order';
-  discountPercentage: number;
-  orderAmount?: number; // For percentage_first_order calculations
+  valueType: 'fixed' | 'percentage'; // fixed = fast beløb, percentage = procent af ordre
+  amount?: number; // For fixed: beløb i øre (5000 = 50 DKK), for percentage: procent (30 = 30%)
   currency?: string; // Default: DKK
 }
 
@@ -15,38 +14,56 @@ interface CreateDiscountCodeResult {
   success: boolean;
   discountId?: string;
   error?: string;
+  details?: any;
 }
 
 /**
- * Creates a Shopify discount code based on voucher type
- * - percentage_next_order: Fixed % off next order (e.g., 30% off entire order)
- * - percentage_first_order: Fixed amount based on % of first order (e.g., 30% of 500 DKK = 150 DKK voucher)
+ * Creates a Shopify discount code
+ * - fixed: Fast beløb (fx 50 DKK)
+ * - percentage: Procent rabat (fx 30% af hele ordren)
  */
 export async function createShopifyDiscountCode(
   admin: any,
   params: CreateDiscountCodeParams
 ): Promise<CreateDiscountCodeResult> {
-  const { code, type, discountPercentage, orderAmount, currency = 'DKK' } = params;
+  const { code, valueType, amount = 0, currency = 'DKK' } = params;
 
   try {
-    if (type === 'percentage_next_order') {
-      // Create a percentage discount (e.g., 30% off entire next order)
+    console.log('[Shopify Discount] Creating discount code:', { code, valueType, amount });
+
+    if (valueType === 'percentage') {
+      // Create a percentage discount (e.g., 30% off entire order)
+      const percentageValue = amount / 100; // Convert 30 to 0.30
+
       const mutation = `
-        mutation discountCodeBasicCreate($basicCodeDiscount: DiscountCodeBasicInput!) {
-          discountCodeBasicCreate(basicCodeDiscount: $basicCodeDiscount) {
+        mutation CreatePercentageDiscount($input: DiscountCodeBasicInput!) {
+          discountCodeBasicCreate(basicCodeDiscount: $input) {
             codeDiscountNode {
               id
+              codeDiscount {
+                ... on DiscountCodeBasic {
+                  title
+                  codes(first: 1) {
+                    edges {
+                      node {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
             }
             userErrors {
               field
               message
+              code
             }
           }
         }
       `;
 
       const variables = {
-        basicCodeDiscount: {
+        input: {
           title: code,
           code: code,
           startsAt: new Date().toISOString(),
@@ -55,7 +72,7 @@ export async function createShopifyDiscountCode(
           },
           customerGets: {
             value: {
-              percentage: (discountPercentage / 100),
+              percentage: percentageValue,
             },
             items: {
               all: true,
@@ -65,67 +82,68 @@ export async function createShopifyDiscountCode(
         },
       };
 
-      console.log('[Shopify Discount] Creating percentage discount:', code, 'with', discountPercentage + '%');
+      console.log('[Shopify Discount] Creating percentage discount:', code, 'with', amount + '%');
 
       const response = await admin.graphql(mutation, { variables });
       const result = await response.json();
 
-      console.log('[Shopify Discount] Full response:', JSON.stringify(result, null, 2));
+      console.log('[Shopify Discount] Response:', JSON.stringify(result, null, 2));
 
       if (result.data?.discountCodeBasicCreate?.userErrors?.length > 0) {
         const errors = result.data.discountCodeBasicCreate.userErrors;
-        console.error('[Shopify Discount] User errors:', errors);
+        console.error('[Shopify Discount] Errors:', errors);
         return {
           success: false,
-          error: errors.map((e: any) => `${e.field}: ${e.message}`).join(', '),
+          error: errors.map((e: any) => `${e.code}: ${e.message}`).join(', '),
+          details: errors,
         };
       }
 
-      if (!result.data?.discountCodeBasicCreate?.codeDiscountNode) {
-        console.error('[Shopify Discount] No codeDiscountNode in response');
+      const discountId = result.data?.discountCodeBasicCreate?.codeDiscountNode?.id;
+      if (discountId) {
+        console.log('[Shopify Discount] ✓ Created percentage discount:', discountId);
+        return { success: true, discountId };
+      } else {
         return {
           success: false,
-          error: 'No discount code created - check Shopify API response',
+          error: 'No discount created',
+          details: result,
         };
       }
-
-      const discountId = result.data.discountCodeBasicCreate.codeDiscountNode.id;
-      console.log('[Shopify Discount] ✓ Created percentage discount:', discountId);
-
-      return {
-        success: true,
-        discountId,
-      };
-    } else if (type === 'percentage_first_order') {
-      // Create a fixed amount discount based on percentage of first order
-      if (!orderAmount) {
-        console.log('[Shopify Discount] No order amount - using percentage_next_order instead');
-        // Fallback to percentage discount if no order amount
-        return createShopifyDiscountCode(admin, {
-          code,
-          type: 'percentage_next_order',
-          discountPercentage,
-        });
-      }
-
-      const discountAmount = (orderAmount * discountPercentage) / 100;
+    } else if (valueType === 'fixed') {
+      // Create a fixed amount discount
+      // amount is in øre (1 DKK = 100 øre), so convert to DKK for Shopify API
+      const amountInDKK = (amount / 100).toFixed(2);
 
       const mutation = `
-        mutation discountCodeBasicCreate($basicCodeDiscount: DiscountCodeBasicInput!) {
-          discountCodeBasicCreate(basicCodeDiscount: $basicCodeDiscount) {
+        mutation CreateFixedDiscount($input: DiscountCodeBasicInput!) {
+          discountCodeBasicCreate(basicCodeDiscount: $input) {
             codeDiscountNode {
               id
+              codeDiscount {
+                ... on DiscountCodeBasic {
+                  title
+                  codes(first: 1) {
+                    edges {
+                      node {
+                        code
+                      }
+                    }
+                  }
+                }
+              }
             }
             userErrors {
               field
               message
+              code
             }
           }
         }
       `;
 
       const variables = {
-        basicCodeDiscount: {
+        input: {
           title: code,
           code: code,
           startsAt: new Date().toISOString(),
@@ -134,9 +152,8 @@ export async function createShopifyDiscountCode(
           },
           customerGets: {
             value: {
-              fixedAmountValue: {
-                amount: discountAmount.toString(),
-                currencyCode: currency,
+              fixedAmount: {
+                amount: amountInDKK,
               },
             },
             items: {
@@ -147,48 +164,46 @@ export async function createShopifyDiscountCode(
         },
       };
 
-      console.log('[Shopify Discount] Creating fixed amount discount:', code, 'for', discountAmount.toFixed(2), 'DKK');
+      console.log('[Shopify Discount] Creating fixed discount:', code, 'for', amountInDKK, currency);
 
       const response = await admin.graphql(mutation, { variables });
       const result = await response.json();
 
-      console.log('[Shopify Discount] Full response:', JSON.stringify(result, null, 2));
+      console.log('[Shopify Discount] Response:', JSON.stringify(result, null, 2));
 
       if (result.data?.discountCodeBasicCreate?.userErrors?.length > 0) {
         const errors = result.data.discountCodeBasicCreate.userErrors;
-        console.error('[Shopify Discount] User errors:', errors);
+        console.error('[Shopify Discount] Errors:', errors);
         return {
           success: false,
-          error: errors.map((e: any) => `${e.field}: ${e.message}`).join(', '),
+          error: errors.map((e: any) => `${e.code}: ${e.message}`).join(', '),
+          details: errors,
         };
       }
 
-      if (!result.data?.discountCodeBasicCreate?.codeDiscountNode) {
-        console.error('[Shopify Discount] No codeDiscountNode in response');
+      const discountId = result.data?.discountCodeBasicCreate?.codeDiscountNode?.id;
+      if (discountId) {
+        console.log('[Shopify Discount] ✓ Created fixed discount:', discountId);
+        return { success: true, discountId };
+      } else {
         return {
           success: false,
-          error: 'No discount code created - check Shopify API response',
+          error: 'No discount created',
+          details: result,
         };
       }
-
-      const discountId = result.data.discountCodeBasicCreate.codeDiscountNode.id;
-      console.log('[Shopify Discount] ✓ Created fixed amount discount:', discountId);
-
-      return {
-        success: true,
-        discountId,
-      };
     }
 
     return {
       success: false,
-      error: `Unknown voucher type: ${type}`,
+      error: `Unknown value type: ${valueType}`,
     };
   } catch (error) {
-    console.error('[Shopify Discount] Error creating discount:', error);
+    console.error('[Shopify Discount] Exception:', error);
     return {
       success: false,
       error: String(error),
+      details: error,
     };
   }
 }

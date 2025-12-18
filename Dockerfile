@@ -1,12 +1,27 @@
-
-FROM node:20
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY . .
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
 
+# Install dependencies
 RUN npm install --legacy-peer-deps
 
-EXPOSE 9293
+# Generate Prisma client
+RUN npx prisma generate
 
-CMD ["npm", "run", "dev"]
+# Copy rest of app
+COPY . .
+
+# Build app
+RUN npm run build
+
+EXPOSE 3000
+
+# Set environment
+ENV NODE_ENV=production
+
+# Run migrations and start app
+CMD ["sh", "-c", "npm run setup && npm start"]

@@ -327,9 +327,11 @@
       formData.append('customerName', email.split('@')[0]);
       formData.append('productTitle', window.ShopifyAnalytics?.meta?.product?.name || 'Product');
 
-      console.log('[ShareJoy] Sending submission to API via App Proxy...');
+      console.log('[ShareJoy] Sending submission to API...');
 
-          const response = await fetch('http://127.0.0.1:3001/api/rewards/upload', {
+      const response = await fetch('https://adventure-moving-stopped-clicks.trycloudflare.com/api/rewards/upload', {
+        method: 'POST',
+        body: formData
       });
 
       console.log('[ShareJoy] Response status:', response.status);
