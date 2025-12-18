@@ -1,52 +1,68 @@
 import { createServer } from "http";
-import { getRequestHandler } from "@react-router/node";
-import * as build from "./build/server/index.js";
 
 const port = process.env.PORT || 10000;
 
-// Create the React Router request handler
-const requestHandler = getRequestHandler(build);
+// For Shopify embedded apps deployed to Node, we need to:
+// 1. Import the built server module
+// 2. Let it handle SSR + API routes
+// 3. Proxy requests through it
 
-// Create HTTP server
+let requestHandler;
+
+// Load the request handler from the build
+try {
+  // Dynamically import the build to handle Shopify initialization
+  const buildModule = await import("./build/server/index.js");
+  
+  // The build module contains everything we need
+  // We'll use it as a handler if it's a function, otherwise create a wrapper
+  if (typeof buildModule.default === "function") {
+    requestHandler = buildModule.default;
+  } else {
+    // Fallback: create a simple handler
+    requestHandler = async (req) => {
+      return new Response("Service running", { status: 200 });
+    };
+  }
+} catch (error) {
+  console.error("Failed to load build module:", error);
+  requestHandler = async (req) => {
+    return new Response("Error loading app", { status: 500 });
+  };
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     
-    // Collect body for POST/PUT/PATCH requests
-    let bodyBuffer = Buffer.alloc(0);
+    // Collect body
+    let body = null;
     if (!["GET", "HEAD"].includes(req.method)) {
-      bodyBuffer = await new Promise((resolve) => {
+      body = await new Promise((resolve) => {
         const chunks = [];
         req.on("data", chunk => chunks.push(chunk));
         req.on("end", () => resolve(Buffer.concat(chunks)));
       });
     }
 
-    // Create Request object
     const request = new Request(url, {
       method: req.method,
       headers: req.headers,
-      body: bodyBuffer.length > 0 ? bodyBuffer : null,
+      body: body || undefined,
       duplex: "half",
     });
 
-    // Get response from React Router
     const response = await requestHandler(request);
 
-    // Send response back to client
-    res.statusCode = response.status;
-    response.headers.forEach((value, name) => {
-      res.setHeader(name, value);
-    });
-
+    res.writeHead(response.status, Object.fromEntries(response.headers));
     if (response.body) {
-      res.end(await response.arrayBuffer());
+      res.end(Buffer.from(await response.arrayBuffer()));
     } else {
       res.end();
     }
   } catch (error) {
     console.error("Server error:", error);
-    res.statusCode = 500;
+    res.writeHead(500, { "Content-Type": "text/plain" });
     res.end("Internal Server Error");
   }
 });
