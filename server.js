@@ -1,5 +1,5 @@
 import { createServer } from "http";
-import { build } from "./build/server/index.js";
+import buildHandler from "./build/server/index.js";
 
 const port = process.env.PORT || 3000;
 
@@ -24,7 +24,7 @@ const server = createServer(async (req, res) => {
     });
 
     // Call the build handler directly
-    const response = await build(request);
+    const response = await buildHandler(request);
     
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
