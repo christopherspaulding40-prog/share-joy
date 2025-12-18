@@ -49,6 +49,8 @@ const server = createServer(async (req, res) => {
     res.statusCode = 500;
     res.end("Internal Server Error");
   }
+});
+
 server.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
 });
