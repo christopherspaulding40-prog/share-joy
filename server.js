@@ -1,61 +1,48 @@
 import { createServer } from "http";
-import { createReadStream } from "fs";
-import { resolve, extname } from "path";
-import { existsSync } from "fs";
-import { fileURLToPath } from "url";
-
-const __dirname = fileURLToPath(new URL(".", import.meta.url));
-const clientDir = resolve(__dirname, "build/client");
+import { getRequestHandler } from "@react-router/node";
+import * as build from "./build/server/index.js";
 
 const port = process.env.PORT || 10000;
 
-// Simple static file serving
-const serveStatic = (filePath) => {
-  const ext = extname(filePath);
-  const contentTypeMap = {
-    ".js": "application/javascript",
-    ".css": "text/css",
-    ".html": "text/html",
-    ".json": "application/json",
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".svg": "image/svg+xml",
-    ".woff": "font/woff",
-    ".woff2": "font/woff2",
-  };
-  
-  const contentType = contentTypeMap[ext] || "application/octet-stream";
-  const stream = createReadStream(filePath);
-  
-  return { stream, contentType };
-};
+// Create the React Router request handler
+const requestHandler = getRequestHandler(build);
 
+// Create HTTP server
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const pathname = url.pathname;
+    const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
     
-    // Try static files first
-    if (pathname !== "/" && !pathname.includes("?")) {
-      const filePath = resolve(clientDir, pathname.slice(1));
-      
-      if (existsSync(filePath) && filePath.startsWith(clientDir)) {
-        const { stream, contentType } = serveStatic(filePath);
-        res.setHeader("Content-Type", contentType);
-        stream.pipe(res);
-        return;
-      }
+    // Collect body for POST/PUT/PATCH requests
+    let bodyBuffer = Buffer.alloc(0);
+    if (!["GET", "HEAD"].includes(req.method)) {
+      bodyBuffer = await new Promise((resolve) => {
+        const chunks = [];
+        req.on("data", chunk => chunks.push(chunk));
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+      });
     }
 
-    // Serve index.html for all other routes (SPA)
-    const indexPath = resolve(clientDir, "index.html");
-    if (existsSync(indexPath)) {
-      const { stream, contentType } = serveStatic(indexPath);
-      res.setHeader("Content-Type", contentType);
-      stream.pipe(res);
+    // Create Request object
+    const request = new Request(url, {
+      method: req.method,
+      headers: req.headers,
+      body: bodyBuffer.length > 0 ? bodyBuffer : null,
+      duplex: "half",
+    });
+
+    // Get response from React Router
+    const response = await requestHandler(request);
+
+    // Send response back to client
+    res.statusCode = response.status;
+    response.headers.forEach((value, name) => {
+      res.setHeader(name, value);
+    });
+
+    if (response.body) {
+      res.end(await response.arrayBuffer());
     } else {
-      res.statusCode = 404;
-      res.end("Not found");
+      res.end();
     }
   } catch (error) {
     console.error("Server error:", error);
