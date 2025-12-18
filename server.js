@@ -1,19 +1,13 @@
 import { createServer } from "http";
-import { createRequestHandler } from "@react-router/node";
-import * as build from "./build/server/index.js";
+import { build } from "./build/server/index.js";
 
 const port = process.env.PORT || 3000;
-
-const handler = createRequestHandler({
-  build,
-  mode: "production",
-});
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     
-    // Convert Node request to Fetch API Request
+    // Collect request body
     let bodyBuffer = null;
     if (!["GET", "HEAD"].includes(req.method)) {
       bodyBuffer = await new Promise((resolve) => {
@@ -29,7 +23,8 @@ const server = createServer(async (req, res) => {
       body: bodyBuffer ? bodyBuffer : null,
     });
 
-    const response = await handler(request);
+    // Call the build handler directly
+    const response = await build(request);
     
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
