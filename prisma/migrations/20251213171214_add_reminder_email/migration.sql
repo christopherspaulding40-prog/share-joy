@@ -5,7 +5,7 @@ CREATE TABLE "Session" (
     "state" TEXT NOT NULL,
     "isOnline" BOOLEAN NOT NULL DEFAULT false,
     "scope" TEXT,
-    "expires" DATETIME,
+    "expires" TIMESTAMP,
     "accessToken" TEXT NOT NULL,
     "userId" BIGINT,
     "firstName" TEXT,
@@ -31,11 +31,11 @@ CREATE TABLE "Submission" (
     "imageUrl" TEXT NOT NULL,
     "imageData" TEXT,
     "status" TEXT NOT NULL DEFAULT 'pending',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL,
     "voucherCode" TEXT,
     "emailSent" BOOLEAN NOT NULL DEFAULT false,
-    "sentAt" DATETIME
+    "sentAt" TIMESTAMP
 );
 
 -- CreateTable
@@ -46,8 +46,8 @@ CREATE TABLE "Reward" (
     "amount" INTEGER NOT NULL,
     "voucherCode" TEXT,
     "redeemed" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" DATETIME NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP NOT NULL,
     CONSTRAINT "Reward_submissionId_fkey" FOREIGN KEY ("submissionId") REFERENCES "Submission" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -86,16 +86,16 @@ CREATE TABLE "RewardSettings" (
     "widgetStep1Text" TEXT NOT NULL DEFAULT '1. Del din ordre på sociale medier',
     "widgetStep2Text" TEXT NOT NULL DEFAULT '2. Upload et screenshot af din story',
     "widgetStep3Text" TEXT NOT NULL DEFAULT '3. Modtag din reward!',
-    "updatedAt" DATETIME NOT NULL
+    "updatedAt" TIMESTAMP NOT NULL
 );
 
 -- CreateTable
 CREATE TABLE "ReminderEmail" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "email" TEXT NOT NULL,
-    "sendAt" DATETIME NOT NULL,
+    "sendAt" TIMESTAMP NOT NULL,
     "sent" BOOLEAN NOT NULL DEFAULT false,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- CreateIndex
