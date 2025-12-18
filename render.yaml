@@ -26,4 +26,3 @@ services:
         sync: false
     plan: free
     schedule: "0 * * * *"
-    timeout: 300
