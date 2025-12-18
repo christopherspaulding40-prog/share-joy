@@ -1,7 +1,16 @@
 import { createServer } from "http";
-import buildHandler from "./build/server/index.js";
+import * as build from "./build/server/index.js";
+import { createRequestHandler } from "@react-router/node";
 
 const port = process.env.PORT || 3000;
+
+const handler = createRequestHandler({
+  build,
+  mode: process.env.NODE_ENV === "production" ? "production" : "development",
+  getLoadContext() {
+    return {};
+  },
+});
 
 const server = createServer(async (req, res) => {
   try {
@@ -23,18 +32,23 @@ const server = createServer(async (req, res) => {
       body: bodyBuffer ? bodyBuffer : null,
     });
 
-    // Call the build handler directly
-    const response = await buildHandler(request);
+    const response = await handler(request);
     
-    res.writeHead(response.status, Object.fromEntries(response.headers));
-    res.end(await response.text());
+    res.statusCode = response.status;
+    for (const [key, value] of response.headers) {
+      res.setHeader(key, value);
+    }
+    
+    if (response.body) {
+      res.end(Buffer.from(await response.arrayBuffer()));
+    } else {
+      res.end();
+    }
   } catch (error) {
-    console.error("Request error:", error);
-    res.writeHead(500);
+    console.error("Server error:", error);
+    res.statusCode = 500;
     res.end("Internal Server Error");
   }
-});
-
 server.listen(port, () => {
   console.log(`🚀 Server listening on http://localhost:${port}`);
 });
