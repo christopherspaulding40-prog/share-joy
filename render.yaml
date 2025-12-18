@@ -24,5 +24,4 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
-    plan: free
     schedule: "0 * * * *"
