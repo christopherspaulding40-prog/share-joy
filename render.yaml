@@ -14,7 +14,7 @@ services:
       - key: SHOPIFY_API_SECRET
         sync: false
     
-  - type: background_worker
+  - type: cron
     name: share-joy-reminders
     env: node
     buildCommand: npm install --legacy-peer-deps && npm run build
