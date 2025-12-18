@@ -1,7 +1,8 @@
 import { createServer } from "http";
-import { build } from "./build/server/index.js";
+import * as buildExports from "./build/server/index.js";
 
 const port = process.env.PORT || 3000;
+const handleRequest = buildExports.default;
 
 const server = createServer(async (req, res) => {
   try {
@@ -12,7 +13,7 @@ const server = createServer(async (req, res) => {
       body: ["GET", "HEAD"].includes(req.method) ? null : req,
     });
 
-    const response = await build.default(request);
+    const response = await handleRequest(request);
     
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
