@@ -1,26 +1,35 @@
 import { createServer } from "http";
-import * as buildModule from "./build/server/index.js";
+import { createRequestHandler } from "@react-router/node";
+import * as build from "./build/server/index.js";
 
 const port = process.env.PORT || 3000;
 
-// The build exports everything as named exports, the handler is likely the default or first export
-const requestHandler = buildModule.default || Object.values(buildModule)[0];
-
-if (typeof requestHandler !== 'function') {
-  console.error('No request handler found in build');
-  process.exit(1);
-}
+const handler = createRequestHandler({
+  build,
+  mode: "production",
+});
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    
+    // Convert Node request to Fetch API Request
+    let bodyBuffer = null;
+    if (!["GET", "HEAD"].includes(req.method)) {
+      bodyBuffer = await new Promise((resolve) => {
+        const chunks = [];
+        req.on("data", (chunk) => chunks.push(chunk));
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+    }
+
     const request = new Request(url, {
       method: req.method,
       headers: req.headers,
-      body: ["GET", "HEAD"].includes(req.method) ? null : req,
+      body: bodyBuffer ? bodyBuffer : null,
     });
 
-    const response = await requestHandler(request);
+    const response = await handler(request);
     
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
