@@ -1,48 +1,61 @@
 import { createServer } from "http";
-import * as build from "./build/server/index.js";
-import { createRequestHandler } from "@react-router/node";
+import { createReadStream } from "fs";
+import { resolve, extname } from "path";
+import { existsSync } from "fs";
+import { fileURLToPath } from "url";
 
-const port = process.env.PORT || 3000;
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const clientDir = resolve(__dirname, "build/client");
 
-const handler = createRequestHandler({
-  build,
-  mode: process.env.NODE_ENV === "production" ? "production" : "development",
-  getLoadContext() {
-    return {};
-  },
-});
+const port = process.env.PORT || 10000;
+
+// Simple static file serving
+const serveStatic = (filePath) => {
+  const ext = extname(filePath);
+  const contentTypeMap = {
+    ".js": "application/javascript",
+    ".css": "text/css",
+    ".html": "text/html",
+    ".json": "application/json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".svg": "image/svg+xml",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+  };
+  
+  const contentType = contentTypeMap[ext] || "application/octet-stream";
+  const stream = createReadStream(filePath);
+  
+  return { stream, contentType };
+};
 
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
+    const pathname = url.pathname;
     
-    // Collect request body
-    let bodyBuffer = null;
-    if (!["GET", "HEAD"].includes(req.method)) {
-      bodyBuffer = await new Promise((resolve) => {
-        const chunks = [];
-        req.on("data", (chunk) => chunks.push(chunk));
-        req.on("end", () => resolve(Buffer.concat(chunks)));
-      });
+    // Try static files first
+    if (pathname !== "/" && !pathname.includes("?")) {
+      const filePath = resolve(clientDir, pathname.slice(1));
+      
+      if (existsSync(filePath) && filePath.startsWith(clientDir)) {
+        const { stream, contentType } = serveStatic(filePath);
+        res.setHeader("Content-Type", contentType);
+        stream.pipe(res);
+        return;
+      }
     }
 
-    const request = new Request(url, {
-      method: req.method,
-      headers: req.headers,
-      body: bodyBuffer ? bodyBuffer : null,
-    });
-
-    const response = await handler(request);
-    
-    res.statusCode = response.status;
-    for (const [key, value] of response.headers) {
-      res.setHeader(key, value);
-    }
-    
-    if (response.body) {
-      res.end(Buffer.from(await response.arrayBuffer()));
+    // Serve index.html for all other routes (SPA)
+    const indexPath = resolve(clientDir, "index.html");
+    if (existsSync(indexPath)) {
+      const { stream, contentType } = serveStatic(indexPath);
+      res.setHeader("Content-Type", contentType);
+      stream.pipe(res);
     } else {
-      res.end();
+      res.statusCode = 404;
+      res.end("Not found");
     }
   } catch (error) {
     console.error("Server error:", error);
@@ -51,6 +64,6 @@ const server = createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => {
-  console.log(`🚀 Server listening on http://localhost:${port}`);
+server.listen(port, "0.0.0.0", () => {
+  console.log(`🚀 Server listening on 0.0.0.0:${port}`);
 });
