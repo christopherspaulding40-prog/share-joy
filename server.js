@@ -1,8 +1,15 @@
 import { createServer } from "http";
-import * as buildExports from "./build/server/index.js";
+import * as buildModule from "./build/server/index.js";
 
 const port = process.env.PORT || 3000;
-const handleRequest = buildExports.default;
+
+// The build exports everything as named exports, the handler is likely the default or first export
+const requestHandler = buildModule.default || Object.values(buildModule)[0];
+
+if (typeof requestHandler !== 'function') {
+  console.error('No request handler found in build');
+  process.exit(1);
+}
 
 const server = createServer(async (req, res) => {
   try {
@@ -13,12 +20,12 @@ const server = createServer(async (req, res) => {
       body: ["GET", "HEAD"].includes(req.method) ? null : req,
     });
 
-    const response = await handleRequest(request);
+    const response = await requestHandler(request);
     
     res.writeHead(response.status, Object.fromEntries(response.headers));
     res.end(await response.text());
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Request error:", error);
     res.writeHead(500);
     res.end("Internal Server Error");
   }
