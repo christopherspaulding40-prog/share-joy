@@ -2,7 +2,7 @@
 
 client_id = "08b813bdae53a1cd4bb12e68cc8aa91b"
 name = "ShareJoy"
-application_url = "https://losing-dow-luck-important.trycloudflare.com"
+application_url = "https://share-joy.onrender.com"
 embedded = true
 
 [build]
@@ -17,7 +17,7 @@ api_version = "2026-01"
 scopes = "write_products"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://share-joy.onrender.com/api/auth" ]
 
 # [app_proxy]
 # url = "/apps/sharejoy"
