@@ -17,9 +17,10 @@ async function initializeServer() {
     const build = await import(join(__dirname, "build", "server", "index.js"));
     
     console.log("[Server] Build exports:", Object.keys(build).slice(0, 20));
+    console.log("[Server] Routes found:", build.routes ? "✅" : "❌");
     
-    // Create request listener using the build module directly
-    requestHandler = createRequestListener(build);
+    // Create request listener using the build module in options object
+    requestHandler = createRequestListener({ build });
     
     console.log("[Server] ✅ React Router handler created successfully");
     return true;
