@@ -1,3 +1,4 @@
+import { createRequestHandler } from "@react-router/node";
 import { createServer } from "http";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -10,22 +11,15 @@ let requestHandler;
 
 async function initializeServer() {
   try {
-    console.log("[Server] Loading React Router build...");
+    console.log("[Server] Loading React Router application...");
     
-    // Import the built server module
-    const buildModule = await import(join(__dirname, "build", "server", "index.js"));
+    // Import the built server manifest
+    const build = await import(join(__dirname, "build", "server", "index.js"));
     
-    // React Router exports the 'entry' which is the handler
-    const entryHandler = buildModule.entry;
+    // Create the request handler using React Router's official function
+    requestHandler = createRequestHandler({ build });
     
-    if (!entryHandler) {
-      console.warn("[Server] No entry handler found, checking for default exports...");
-      console.log("[Server] Available exports:", Object.keys(buildModule).filter(k => !k.startsWith('_')));
-      throw new Error("No entry handler found in server build");
-    }
-    
-    console.log("[Server] ✅ React Router handler loaded");
-    requestHandler = entryHandler;
+    console.log("[Server] ✅ React Router handler created successfully");
     return true;
   } catch (e) {
     console.error("[Server] ❌ Failed to initialize:", e.message);
