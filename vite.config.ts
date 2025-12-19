@@ -54,10 +54,6 @@ export default defineConfig({
   ],
   build: {
     assetsInlineLimit: 0,
-    outDir: "build/client",
-    rollupOptions: {
-      input: "index.html",
-    },
   },
   optimizeDeps: {
     include: ["@shopify/app-bridge-react"],
