@@ -1,72 +1,79 @@
 import { createServer } from "http";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const port = process.env.PORT || 10000;
 
-// For Shopify embedded apps deployed to Node, we need to:
-// 1. Import the built server module
-// 2. Let it handle SSR + API routes
-// 3. Proxy requests through it
-
+// Import the React Router handler
 let requestHandler;
 
-// Load the request handler from the build
-try {
-  // Dynamically import the build to handle Shopify initialization
-  const buildModule = await import("./build/server/index.js");
-  
-  // The build module contains everything we need
-  // We'll use it as a handler if it's a function, otherwise create a wrapper
-  if (typeof buildModule.default === "function") {
-    requestHandler = buildModule.default;
-  } else {
-    // Fallback: create a simple handler
-    requestHandler = async (req) => {
-      return new Response("Service running", { status: 200 });
+async function initHandler() {
+  try {
+    const build = await import("./build/server/index.js");
+    requestHandler = build.default || build.handler;
+    console.log("✅ React Router handler loaded");
+  } catch (e) {
+    console.error("❌ Failed to load React Router handler:", e.message);
+    // Fallback handler
+    requestHandler = (req, res) => {
+      res.writeHead(500, { "Content-Type": "text/html" });
+      res.end(`
+        <!DOCTYPE html>
+        <html>
+          <head><title>Error</title></head>
+          <body><h1>Server Error</h1><p>Failed to load React Router handler</p></body>
+        </html>
+      `);
     };
   }
-} catch (error) {
-  console.error("Failed to load build module:", error);
-  requestHandler = async (req) => {
-    return new Response("Error loading app", { status: 500 });
-  };
 }
+
+// Initialize handler before starting server
+await initHandler();
 
 const server = createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, `http://${req.headers.host || "localhost"}`);
-    
-    // Collect body
-    let body = null;
-    if (!["GET", "HEAD"].includes(req.method)) {
-      body = await new Promise((resolve) => {
-        const chunks = [];
-        req.on("data", chunk => chunks.push(chunk));
-        req.on("end", () => resolve(Buffer.concat(chunks)));
-      });
-    }
-
-    const request = new Request(url, {
-      method: req.method,
-      headers: req.headers,
-      body: body || undefined,
-      duplex: "half",
-    });
-
-    const response = await requestHandler(request);
-
-    res.writeHead(response.status, Object.fromEntries(response.headers));
-    if (response.body) {
-      res.end(Buffer.from(await response.arrayBuffer()));
+    // Use the React Router handler
+    if (requestHandler) {
+      await requestHandler(req, res);
     } else {
-      res.end();
+      res.writeHead(503, { "Content-Type": "text/html" });
+      res.end("Service initializing...");
     }
   } catch (error) {
-    console.error("Server error:", error);
-    res.writeHead(500, { "Content-Type": "text/plain" });
-    res.end("Internal Server Error");
+    console.error("Request error:", error);
+    res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>ShareJoy - Error</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+            #root { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f5f5; }
+            .container { background: white; padding: 2rem; border-radius: 8px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            h1 { color: #333; margin-bottom: 1rem; }
+            p { color: #666; line-height: 1.6; }
+          </style>
+        </head>
+        <body>
+          <div id="root">
+            <div class="container">
+              <h1>❌ Server Error</h1>
+              <p>${error.message}</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `);
   }
 });
 
 server.listen(port, "0.0.0.0", () => {
-  console.log(`🚀 Server listening on 0.0.0.0:${port}`);
+  console.log(`✅ ShareJoy server running on 0.0.0.0:${port}`);
 });
