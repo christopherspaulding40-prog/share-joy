@@ -1,8 +1,10 @@
 import { createServer } from "http";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
+import { fileURLToPath } from "url";
 
-const __dirname = import.meta.url.split("/").slice(0, -1).join("/").replace("file://", "");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = join(__filename, "..");
 const port = process.env.PORT || 10000;
 
 const server = createServer(async (req, res) => {
@@ -49,11 +51,12 @@ const server = createServer(async (req, res) => {
     // Serve index.html for all other requests (SPA routing)
     try {
       const indexPath = join(__dirname, "build/client", "index.html");
+      console.log("[Server] Serving index.html from:", indexPath);
       const content = await readFile(indexPath);
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(content);
     } catch (error) {
-      console.error("[Server] Could not load index.html:", error);
+      console.error("[Server] Could not load index.html from", join(__dirname, "build/client", "index.html"), ":", error.message);
       res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
       res.end(`
         <!DOCTYPE html>
@@ -65,6 +68,7 @@ const server = createServer(async (req, res) => {
           <body>
             <h1>Server Error</h1>
             <p>Could not load application. Check server logs.</p>
+            <p style="font-size: 0.9em; color: #666;">Build directory may not exist.</p>
           </body>
         </html>
       `);
