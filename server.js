@@ -4,7 +4,7 @@ import { dirname, join } from "path";
 import fs from "fs";
 import { PrismaClient } from "@prisma/client";
 import { createRequestHandler } from "react-router";
-import * as build from "./build/index.js";
+import * as build from "./build/server/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
