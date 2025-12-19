@@ -7,6 +7,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = join(__filename, "..");
 const port = process.env.PORT || 10000;
 
+import { createServer } from "http";
+import { readFile, stat, readdir } from "fs/promises";
+import { join } from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = join(__filename, "..");
+const port = process.env.PORT || 10000;
+
 // Find the correct build directory
 async function findBuildDir() {
   const possiblePaths = [
@@ -23,15 +32,25 @@ async function findBuildDir() {
     try {
       const stats = await stat(path);
       if (stats.isDirectory()) {
+        // List what's in the directory
+        const files = await readdir(path);
         console.log(`[Server] ✅ Found build directory at: ${path}`);
-        return path;
+        console.log(`[Server] Contents:`, files.slice(0, 20));
+        
+        // Check if index.html exists
+        if (files.includes("index.html")) {
+          console.log(`[Server] ✅ index.html found!`);
+          return path;
+        } else {
+          console.log(`[Server] ⚠️  index.html NOT found in this directory`);
+        }
       }
     } catch (e) {
       console.log(`[Server] ❌ Checked: ${path}`);
     }
   }
   
-  console.warn("[Server] ⚠️  No build directory found!");
+  console.warn("[Server] ⚠️  No build directory with index.html found!");
   return null;
 }
 
