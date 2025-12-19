@@ -13,32 +13,19 @@ async function initializeServer() {
   try {
     console.log("[Server] Loading React Router application...");
     
-    // Import the built server
-    const buildModule = await import(join(__dirname, "build", "server", "index.js"));
+    // Import the built server module
+    const build = await import(join(__dirname, "build", "server", "index.js"));
     
-    // Extract the build manifest properties from the module
-    const build = {
-      assets: buildModule.assets,
-      assetsBuildDirectory: buildModule.assetsBuildDirectory,
-      basename: buildModule.basename,
-      entry: buildModule.entry,
-      future: buildModule.future,
-      isSpaMode: buildModule.isSpaMode,
-      prerender: buildModule.prerender,
-      publicPath: buildModule.publicPath,
-      routeDiscovery: buildModule.routeDiscovery,
-      routes: buildModule.routes,
-      ssr: buildModule.ssr,
-    };
+    console.log("[Server] Build exports:", Object.keys(build).slice(0, 20));
     
-    // Create request listener using React Router's function
+    // Create request listener using the build module directly
     requestHandler = createRequestListener(build);
     
     console.log("[Server] ✅ React Router handler created successfully");
     return true;
   } catch (e) {
     console.error("[Server] ❌ Failed to initialize:", e.message);
-    console.error(e);
+    console.error(e.stack);
     return false;
   }
 }
