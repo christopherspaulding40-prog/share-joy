@@ -1,4 +1,4 @@
-import { createRequestHandler } from "@react-router/node";
+import { createRequestListener } from "@react-router/node";
 import { createServer } from "http";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -13,11 +13,11 @@ async function initializeServer() {
   try {
     console.log("[Server] Loading React Router application...");
     
-    // Import the built server manifest
+    // Import the built server
     const build = await import(join(__dirname, "build", "server", "index.js"));
     
-    // Create the request handler using React Router's official function
-    requestHandler = createRequestHandler({ build });
+    // Create request listener using React Router's function
+    requestHandler = createRequestListener(build);
     
     console.log("[Server] ✅ React Router handler created successfully");
     return true;
@@ -40,7 +40,7 @@ const server = createServer(async (req, res) => {
     }
 
     // Call the React Router handler
-    await requestHandler(req, res);
+    requestHandler(req, res);
   } catch (error) {
     console.error("[Server] Error handling request:", error);
     if (!res.headersSent) {
