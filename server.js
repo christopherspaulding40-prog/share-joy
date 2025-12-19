@@ -10,23 +10,26 @@ let requestHandler;
 
 async function initializeServer() {
   try {
-    console.log("[Server] Initializing React Router handler...");
+    console.log("[Server] Loading React Router build...");
     
     // Import the built server module
-    const serverModule = await import(join(__dirname, "build", "server", "index.js"));
+    const buildModule = await import(join(__dirname, "build", "server", "index.js"));
     
-    // The server module exports a default handler
-    requestHandler = serverModule.default;
+    // React Router exports the 'entry' which is the handler
+    const entryHandler = buildModule.entry;
     
-    if (!requestHandler) {
-      throw new Error("No default export found in server build");
+    if (!entryHandler) {
+      console.warn("[Server] No entry handler found, checking for default exports...");
+      console.log("[Server] Available exports:", Object.keys(buildModule).filter(k => !k.startsWith('_')));
+      throw new Error("No entry handler found in server build");
     }
     
-    console.log("[Server] ✅ React Router handler loaded successfully");
+    console.log("[Server] ✅ React Router handler loaded");
+    requestHandler = entryHandler;
     return true;
   } catch (e) {
     console.error("[Server] ❌ Failed to initialize:", e.message);
-    console.error(e.stack);
+    console.error(e);
     return false;
   }
 }
