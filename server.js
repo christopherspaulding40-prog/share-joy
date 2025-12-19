@@ -1,14 +1,9 @@
 import { createServer } from "http";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
-import { createRequestHandler } from "@react-router/node";
-import * as build from "./build/server/index.js";
 
 const __dirname = import.meta.url.split("/").slice(0, -1).join("/").replace("file://", "");
 const port = process.env.PORT || 10000;
-
-// Create the request handler for React Router
-const handler = createRequestHandler({ build });
 
 const server = createServer(async (req, res) => {
   try {
@@ -48,34 +43,31 @@ const server = createServer(async (req, res) => {
         return;
       }
     } catch (e) {
-      // File not found, continue to React Router
+      // File not found, serve index.html for SPA routing
     }
 
-    // Use React Router handler for all other requests
-    const nodeRequest = {
-      method: req.method,
-      url: `http://${req.headers.host}${req.url}`,
-      headers: req.headers,
-      ...(req.method !== "GET" && req.method !== "HEAD" && { body: req })
-    };
-
-    const response = await handler(nodeRequest);
-    
-    // Set response headers
-    for (const [name, value] of response.headers.entries()) {
-      res.setHeader(name, value);
-    }
-    res.writeHead(response.status);
-
-    // Stream the response
-    if (response.body) {
-      if (typeof response.body.pipe === "function") {
-        response.body.pipe(res);
-      } else {
-        res.end(await response.text());
-      }
-    } else {
-      res.end();
+    // Serve index.html for all other requests (SPA routing)
+    try {
+      const indexPath = join(__dirname, "build/client", "index.html");
+      const content = await readFile(indexPath);
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(content);
+    } catch (error) {
+      console.error("[Server] Could not load index.html:", error);
+      res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+      res.end(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Error</title>
+          </head>
+          <body>
+            <h1>Server Error</h1>
+            <p>Could not load application. Check server logs.</p>
+          </body>
+        </html>
+      `);
     }
   } catch (error) {
     console.error("[Server] Error:", error);
