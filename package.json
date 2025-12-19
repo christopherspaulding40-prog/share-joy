@@ -2,7 +2,8 @@
   "name": "share-joy",
   "private": true,
   "scripts": {
-    "build": "react-router build",
+    "build": "react-router build && npm run postbuild",
+    "postbuild": "node scripts/create-index-html.js",
     "dev": "BROWSER=none shopify app dev",
     "dev:local": "BROWSER=none shopify app dev --use-localhost",
     "dev:vite": "react-router dev",
