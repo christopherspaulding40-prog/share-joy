@@ -112,26 +112,18 @@ async function handleApi(req, res, pathname, searchParams) {
     // GET /apps/sharejoy/api/settings
     if (pathname === "/apps/sharejoy/api/settings" && req.method === "GET") {
       try {
-        // For now, return mock settings - you'll connect this to your shop/settings table
-        const settings = {
-          widgetTitle: "🎁 Del & Få",
-          widgetSubtitle: "Del din ordre på sociale medier og få din reward.",
-          widgetButtonLabel: "Læs mere",
-          widgetModalTitle: "🎁 Del & Få Rabat",
-          widgetModalBody: "Upload et screenshot af din story, så sender vi din reward.",
-          widgetStep1Text: "Tag et screenshot af din story med produktet",
-          widgetStep2Text: "Del den på Instagram/TikTok",
-          widgetStep3Text: "Få din rabatkode via email",
-          backgroundColor: "#a855f7",
-          accentColor: "#ec4899",
-          textColor: "#ffffff",
-          buttonColor: "#ffffff",
-          buttonTextColor: "#a855f7",
-          borderRadius: 8,
-          designStyle: "gradient",
-          amount: 10,
-          valueType: "percentage",
-        };
+        // Get the shop from headers (Shopify provides this)
+        const shop = req.headers["x-shopify-shop-id"] || "default";
+        
+        // Try to get settings from database
+        let settings = await prisma.rewardSettings.findFirst();
+        
+        if (!settings) {
+          // Create default settings if none exist
+          settings = await prisma.rewardSettings.create({
+            data: {},
+          });
+        }
 
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ success: true, settings }));
@@ -148,11 +140,24 @@ async function handleApi(req, res, pathname, searchParams) {
     if (pathname === "/apps/sharejoy/api/settings" && req.method === "POST") {
       try {
         const settings = JSON.parse(body || "{}");
-        // TODO: Save to database
-        // await prisma.shopSettings.update(...);
+        const shop = req.headers["x-shopify-shop-id"] || "default";
+        
+        // Get or create settings record
+        let existingSettings = await prisma.rewardSettings.findFirst();
+        
+        if (!existingSettings) {
+          existingSettings = await prisma.rewardSettings.create({
+            data: settings,
+          });
+        } else {
+          existingSettings = await prisma.rewardSettings.update({
+            where: { id: existingSettings.id },
+            data: settings,
+          });
+        }
 
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true, settings }));
+        res.end(JSON.stringify({ success: true, settings: existingSettings }));
         return;
       } catch (error) {
         console.error("[API] Settings update error:", error);
@@ -173,11 +178,16 @@ async function handleApi(req, res, pathname, searchParams) {
           return;
         }
 
-        // Save reminder to database
-        // await prisma.reminderEmail.create({ data: { email } });
+        // Save reminder to database - send in 3 days
+        const sendAt = new Date();
+        sendAt.setDate(sendAt.getDate() + 3);
+        
+        const reminder = await prisma.reminderEmail.create({
+          data: { email, sendAt },
+        });
 
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ success: true, message: "Reminder registered" }));
+        res.end(JSON.stringify({ success: true, message: "Reminder registered", reminder }));
         return;
       } catch (error) {
         console.error("[API] Reminder error:", error);
