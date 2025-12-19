@@ -14,21 +14,24 @@ async function findBuildDir() {
     join(__dirname, "dist"),
     join(__dirname, "..", "build", "client"),
     "/opt/render/project/src/build/client",
+    "/opt/render/project/build/client",
   ];
+  
+  console.log("[Server] Looking for build directory...");
   
   for (const path of possiblePaths) {
     try {
       const stats = await stat(path);
       if (stats.isDirectory()) {
-        console.log(`[Server] Found build directory at: ${path}`);
+        console.log(`[Server] ✅ Found build directory at: ${path}`);
         return path;
       }
     } catch (e) {
-      // Path doesn't exist, try next one
+      console.log(`[Server] ❌ Checked: ${path}`);
     }
   }
   
-  console.warn("[Server] No build directory found in any expected location");
+  console.warn("[Server] ⚠️  No build directory found!");
   return null;
 }
 
