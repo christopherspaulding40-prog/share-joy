@@ -12,23 +12,7 @@ let requestHandler;
 async function initializeServer() {
   try {
     const build = await import(join(__dirname, "build", "server", "index.js"));
-    
-    // Create request listener with error handling wrapper
-    const baseHandler = createRequestListener({ build });
-    
-    // Wrap handler to catch errors and prevent crashes
-    requestHandler = (req, res) => {
-      try {
-        baseHandler(req, res);
-      } catch (error) {
-        console.error("[Server] Handler error:", error.message);
-        if (!res.headersSent) {
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(JSON.stringify({ error: "Internal server error" }));
-        }
-      }
-    };
-    
+    requestHandler = createRequestListener({ build });
     console.log("[Server] ✅ React Router handler initialized");
     return true;
   } catch (e) {
@@ -47,8 +31,21 @@ const server = createServer(async (req, res) => {
     }
   }
 
-  requestHandler(req, res);
+  // Wrap the request handler to catch async errors
+  Promise.resolve()
+    .then(() => requestHandler(req, res))
+    .catch((error) => {
+      console.error("[Server] Request handler error:", error.message);
+      if (!res.headersSent) {
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Internal server error" }));
+      }
+    });
 });
+
+// Increase timeout values to prevent SIGTERM issues
+server.keepAliveTimeout = 120000;
+server.headersTimeout = 120000;
 
 server.listen(port, "0.0.0.0", () => {
   console.log(`✅ ShareJoy server running on 0.0.0.0:${port}`);
