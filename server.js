@@ -1,13 +1,4 @@
 import { createServer } from "http";
-import { readFile, stat } from "fs/promises";
-import { join } from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = join(__filename, "..");
-const port = process.env.PORT || 10000;
-
-import { createServer } from "http";
 import { readFile, stat, readdir } from "fs/promises";
 import { join } from "path";
 import { fileURLToPath } from "url";
