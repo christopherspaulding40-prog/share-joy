@@ -3,6 +3,8 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
 import { PrismaClient } from "@prisma/client";
+import { createRequestHandler } from "react-router";
+import * as build from "./build/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -41,6 +43,12 @@ function loadAssets() {
 
 loadAssets();
 
+// Create React Router handler
+const handler = createRequestHandler({
+  build,
+  mode: "production",
+});
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${req.headers.host}`);
@@ -59,7 +67,7 @@ const server = createServer(async (req, res) => {
 
     console.log(`[Server] ${req.method} ${pathname}`);
 
-    // API Routes
+    // API Routes (handle before React Router)
     if (pathname.startsWith("/apps/sharejoy/api/")) {
       await handleApi(req, res, pathname, url.searchParams);
       return;
@@ -73,7 +81,7 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // Serve files from build/client
+    // Try to serve static file first
     let filePath = join(clientDir, pathname);
     const normalized = new URL(`file://${filePath}`).pathname;
     if (!normalized.startsWith(clientDir)) {
@@ -82,7 +90,7 @@ const server = createServer(async (req, res) => {
 
     try {
       const stat = fs.statSync(filePath);
-      if (stat.isFile()) {
+      if (stat.isFile() && !pathname.startsWith("/app")) {
         const content = fs.readFileSync(filePath);
         const type = getContentType(filePath);
         res.writeHead(200, { "Content-Type": type });
@@ -90,7 +98,51 @@ const server = createServer(async (req, res) => {
         return;
       }
     } catch (e) {
-      // File doesn't exist
+      // File doesn't exist, continue to React Router
+    }
+
+    // Use React Router for /app routes and other dynamic routes
+    try {
+      const response = await handler(req, res);
+      
+      // Convert Response to Node response
+      if (response) {
+        const statusCode = response.status || 200;
+        const contentType = response.headers.get("content-type");
+        
+        // Set headers
+        response.headers.forEach((value, key) => {
+          res.setHeader(key, value);
+        });
+        
+        res.writeHead(statusCode, { "Content-Type": contentType || "text/html; charset=utf-8" });
+        
+        // Send body
+        if (response.body) {
+          const reader = response.body.getReader();
+          const pump = async () => {
+            try {
+              const { done, value } = await reader.read();
+              if (done) {
+                res.end();
+                return;
+              }
+              res.write(value);
+              pump();
+            } catch (err) {
+              console.error("[Server] Stream error:", err);
+              res.end();
+            }
+          };
+          pump();
+        } else {
+          res.end();
+        }
+      }
+      return;
+    } catch (error) {
+      console.error("[Server] React Router error:", error.message);
+      // Fall through to 404
     }
 
     // Default 404
@@ -112,9 +164,6 @@ async function handleApi(req, res, pathname, searchParams) {
     // GET /apps/sharejoy/api/settings
     if (pathname === "/apps/sharejoy/api/settings" && req.method === "GET") {
       try {
-        // Get the shop from headers (Shopify provides this)
-        const shop = req.headers["x-shopify-shop-id"] || "default";
-        
         // Try to get settings from database
         let settings = await prisma.rewardSettings.findFirst();
         
@@ -140,7 +189,6 @@ async function handleApi(req, res, pathname, searchParams) {
     if (pathname === "/apps/sharejoy/api/settings" && req.method === "POST") {
       try {
         const settings = JSON.parse(body || "{}");
-        const shop = req.headers["x-shopify-shop-id"] || "default";
         
         // Get or create settings record
         let existingSettings = await prisma.rewardSettings.findFirst();
@@ -251,6 +299,7 @@ process.on("SIGTERM", async () => {
 
 server.listen(port, "0.0.0.0", () => {
   console.log(`✅ ShareJoy server running on 0.0.0.0:${port}`);
-  console.log(`📂 Serving: ${clientDir}`);
-  console.log(`🔌 API ready at: /apps/sharejoy/api/*`);
+  console.log(`🏠 Admin dashboard: /app`);
+  console.log(`📂 Static assets: ${clientDir}`);
+  console.log(`🔌 API endpoints: /apps/sharejoy/api/*`);
 });
