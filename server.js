@@ -27,12 +27,16 @@ function loadAssets() {
     // Load index.html
     if (fs.existsSync(indexPath)) {
       indexHtml = fs.readFileSync(indexPath, "utf-8");
+      console.log("[Server] ✅ index.html loaded");
+    } else {
+      console.warn("[Server] ⚠️  index.html not found at", indexPath);
     }
     
     // Cache assets
     const assetsDir = join(clientDir, "assets");
     if (fs.existsSync(assetsDir)) {
       const files = fs.readdirSync(assetsDir);
+      console.log("[Server] Caching", files.length, "asset files");
       files.forEach((file) => {
         const filePath = join(assetsDir, file);
         const content = fs.readFileSync(filePath);
@@ -41,13 +45,16 @@ function loadAssets() {
           type: getContentType(filePath),
         });
       });
+    } else {
+      console.warn("[Server] ⚠️  assets directory not found at", assetsDir);
     }
   } catch (e) {
     console.error("[Server] Error loading assets:", e.message);
   }
 }
 
-loadAssets();
+// Load assets after a brief delay to ensure build is complete
+setTimeout(loadAssets, 500);
 
 const server = createServer(async (req, res) => {
   try {
