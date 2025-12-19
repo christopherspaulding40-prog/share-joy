@@ -23,29 +23,57 @@ async function findBuildDir() {
     try {
       const stats = await stat(path);
       if (stats.isDirectory()) {
-        // List what's in the directory
         const files = await readdir(path);
         console.log(`[Server] ✅ Found build directory at: ${path}`);
         console.log(`[Server] Contents:`, files.slice(0, 20));
-        
-        // Check if index.html exists
-        if (files.includes("index.html")) {
-          console.log(`[Server] ✅ index.html found!`);
-          return path;
-        } else {
-          console.log(`[Server] ⚠️  index.html NOT found in this directory`);
-        }
+        return path;
       }
     } catch (e) {
       console.log(`[Server] ❌ Checked: ${path}`);
     }
   }
   
-  console.warn("[Server] ⚠️  No build directory with index.html found!");
+  console.warn("[Server] ⚠️  No build directory found!");
   return null;
 }
 
 let buildDir = null;
+
+// Generate HTML with React app entry point
+async function generateHTML() {
+  // Find the main entry file in assets
+  if (!buildDir) return null;
+  
+  try {
+    const files = await readdir(join(buildDir, "assets"));
+    const entryFile = files.find(f => f.startsWith("entry.client") && f.endsWith(".js"));
+    
+    if (!entryFile) {
+      console.warn("[Server] ⚠️  Could not find entry.client JS file");
+      return null;
+    }
+    
+    console.log(`[Server] Found entry file: ${entryFile}`);
+    
+    return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="preconnect" href="https://cdn.shopify.com/" />
+    <link rel="stylesheet" href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css" />
+    <title>ShareJoy</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/assets/${entryFile}"></script>
+  </body>
+</html>`;
+  } catch (e) {
+    console.error("[Server] Error generating HTML:", e.message);
+    return null;
+  }
+}
 
 const server = createServer(async (req, res) => {
   try {
@@ -54,7 +82,7 @@ const server = createServer(async (req, res) => {
       buildDir = await findBuildDir();
     }
 
-    // Serve static client assets with cache headers
+    // Serve static assets with cache headers
     if (req.url && /\.(js|css|woff|woff2|ttf|eot|map|png|jpg|jpeg|gif|svg|ico)(\?|$)/.test(req.url)) {
       if (buildDir) {
         try {
@@ -75,38 +103,18 @@ const server = createServer(async (req, res) => {
           res.end(content);
           return;
         } catch (e) {
-          // Asset not found, continue
+          // Asset not found
         }
       }
     }
 
-    // Try to serve static files from build directory
+    // Serve generated HTML for all other requests (SPA routing)
     if (buildDir) {
-      try {
-        const filePath = join(buildDir, req.url === "/" ? "index.html" : req.url.split("?")[0]);
-        const stats = await stat(filePath);
-        if (stats.isFile()) {
-          const content = await readFile(filePath);
-          const contentType = filePath.endsWith(".html") ? "text/html; charset=utf-8" : "application/octet-stream";
-          res.writeHead(200, { "Content-Type": contentType });
-          res.end(content);
-          return;
-        }
-      } catch (e) {
-        // File not found, serve index.html for SPA routing
-      }
-    }
-
-    // Serve index.html for all other requests (SPA routing)
-    if (buildDir) {
-      try {
-        const indexPath = join(buildDir, "index.html");
-        const content = await readFile(indexPath);
+      const html = await generateHTML();
+      if (html) {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(content);
+        res.end(html);
         return;
-      } catch (error) {
-        console.error("[Server] Could not load index.html from", buildDir, ":", error.message);
       }
     }
 
@@ -121,32 +129,14 @@ const server = createServer(async (req, res) => {
         </head>
         <body>
           <h1>Server Error</h1>
-          <p>Build directory not found. Expected build artifacts at one of:</p>
-          <ul>
-            <li>${join(__dirname, "build/client")}</li>
-            <li>${join(__dirname, "dist")}</li>
-            <li>/opt/render/project/src/build/client</li>
-          </ul>
-          <p>Make sure the build completed successfully.</p>
+          <p>Could not locate build artifacts. Build directory: ${buildDir || 'not found'}</p>
         </body>
       </html>
     `);
   } catch (error) {
     console.error("[Server] Error:", error);
     res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Error</title>
-        </head>
-        <body>
-          <h1>Server Error</h1>
-          <pre>${error.message}</pre>
-        </body>
-      </html>
-    `);
+    res.end(`<html><body><h1>Server Error</h1><pre>${error.message}</pre></body></html>`);
   }
 });
 
