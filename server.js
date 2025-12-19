@@ -3,14 +3,13 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import fs from "fs";
 import { PrismaClient } from "@prisma/client";
-import { createRequestHandler } from "react-router";
-import * as build from "./build/server/index.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const port = process.env.PORT || 10000;
 
 const clientDir = join(__dirname, "build", "client");
+const indexPath = join(clientDir, "index.html");
 
 // Initialize Prisma
 const prisma = new PrismaClient({
@@ -19,11 +18,18 @@ const prisma = new PrismaClient({
 
 console.log("[Server] ✅ Prisma initialized");
 
-// Cache client assets
+// Cache client assets and index.html
 const assetCache = new Map();
+let indexHtml = "";
 
 function loadAssets() {
   try {
+    // Load index.html
+    if (fs.existsSync(indexPath)) {
+      indexHtml = fs.readFileSync(indexPath, "utf-8");
+    }
+    
+    // Cache assets
     const assetsDir = join(clientDir, "assets");
     if (fs.existsSync(assetsDir)) {
       const files = fs.readdirSync(assetsDir);
@@ -42,12 +48,6 @@ function loadAssets() {
 }
 
 loadAssets();
-
-// Create React Router handler
-const handler = createRequestHandler({
-  build,
-  mode: "production",
-});
 
 const server = createServer(async (req, res) => {
   try {
@@ -90,7 +90,7 @@ const server = createServer(async (req, res) => {
 
     try {
       const stat = fs.statSync(filePath);
-      if (stat.isFile() && !pathname.startsWith("/app")) {
+      if (stat.isFile()) {
         const content = fs.readFileSync(filePath);
         const type = getContentType(filePath);
         res.writeHead(200, { "Content-Type": type });
@@ -98,56 +98,12 @@ const server = createServer(async (req, res) => {
         return;
       }
     } catch (e) {
-      // File doesn't exist, continue to React Router
+      // File doesn't exist
     }
 
-    // Use React Router for /app routes and other dynamic routes
-    try {
-      const response = await handler(req, res);
-      
-      // Convert Response to Node response
-      if (response) {
-        const statusCode = response.status || 200;
-        const contentType = response.headers.get("content-type");
-        
-        // Set headers
-        response.headers.forEach((value, key) => {
-          res.setHeader(key, value);
-        });
-        
-        res.writeHead(statusCode, { "Content-Type": contentType || "text/html; charset=utf-8" });
-        
-        // Send body
-        if (response.body) {
-          const reader = response.body.getReader();
-          const pump = async () => {
-            try {
-              const { done, value } = await reader.read();
-              if (done) {
-                res.end();
-                return;
-              }
-              res.write(value);
-              pump();
-            } catch (err) {
-              console.error("[Server] Stream error:", err);
-              res.end();
-            }
-          };
-          pump();
-        } else {
-          res.end();
-        }
-      }
-      return;
-    } catch (error) {
-      console.error("[Server] React Router error:", error.message);
-      // Fall through to 404
-    }
-
-    // Default 404
-    res.writeHead(404, { "Content-Type": "application/json" });
-    res.end(JSON.stringify({ error: "Not found" }));
+    // For all other routes (including /app/*), serve index.html (SPA)
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(indexHtml);
   } catch (error) {
     console.error("[Server] Error:", error.message);
     if (!res.headersSent) {
